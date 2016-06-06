@@ -10,25 +10,12 @@ Gary Bishop, January 2008
 '''
 
 import os
-import sys
 import ctypes
-from ctypes import (c_char_p, c_int, c_int16, c_uint16, c_byte, c_uint, c_uint8, c_float,
-    c_void_p, c_char, c_short, c_ushort)
+from ctypes import (c_char_p, c_int, c_byte, c_uint, c_uint16, c_float, c_short,
+                    c_void_p, c_char, c_ushort, c_ubyte)
 from ctypes import CFUNCTYPE, Structure, POINTER, Union, byref
 
 # duplicate the wiiuse data structures
-
-class ang3s(Structure):
-    _fields_ = [('roll', c_int16),
-                ('pitch', c_int16),
-                ('yaw', c_int16)
-                ]
-
-class ang3f(Structure):
-    _fields_ = [('roll', c_float),
-                ('pitch', c_float),
-                ('yaw', c_float)
-                ]
 
 class vec2b(Structure):
     _fields_ = [('x', c_byte),
@@ -47,6 +34,19 @@ class vec3f(Structure):
                 ('z', c_float),
                 ]
 
+
+class ang3s(Structure):
+    _fields_ = [('roll', c_short),
+                ('pitch', c_short),
+                ('yaw', c_short),
+                ]
+
+class ang3f(Structure):
+    _fields_ = [('roll', c_float),
+                ('pitch', c_float),
+                ('yaw', c_float),
+                ]
+    
 class orient(Structure):
     _fields_ = [('roll', c_float),
                 ('pitch', c_float),
@@ -67,8 +67,8 @@ class ir_dot(Structure):
     _fields_ = [('visible', c_byte),
                 ('x', c_uint),
                 ('y', c_uint),
-                ('rx', c_int16),
-                ('ry', c_int16),
+                ('rx', c_short),
+                ('ry', c_short),
                 ('order', c_byte),
                 ('size', c_byte),
                 ]
@@ -112,9 +112,9 @@ class nunchuk(Structure):
                 ]
 
 class classic_ctrl(Structure):
-    _fields_ = [('btns', c_int16),
-                ('btns_held', c_int16),
-                ('btns_released', c_int16),
+    _fields_ = [('btns', c_short),
+                ('btns_held', c_short),
+                ('btns_released', c_short),
                 ('r_shoulder', c_float),
                 ('l_shoulder', c_float),
                 ('ljs', joystick),
@@ -122,48 +122,55 @@ class classic_ctrl(Structure):
                 ]
 
 class guitar_hero_3(Structure):
-    _fields_ = [('btns', c_int16),
-                ('btns_held', c_int16),
-                ('btns_released', c_int16),
+    _fields_ = [('btns', c_short),
+                ('btns_held', c_short),
+                ('btns_released', c_short),
                 ('whammy_bar', c_float),
                 ('js', joystick),
                 ]
-class motion_plus(Structure):
-    _fields_ = [('ext', c_byte),
-                ('raw_gyro', ang3s),
-                ('cal_gyro', ang3s),
-                ('angle_rate_gyro', ang3f),
-                ('orient', orient),
-                ('acc_mode', c_byte),
-                ('raw_gyro_threshold', c_int),
-                ('nunchuk', POINTER(nunchuk)),
-                ('classic_ctrl', POINTER(classic_ctrl))
-                ]
+
 class wii_board(Structure):
     _fields_ = [('tl', c_float),
                 ('tr', c_float),
                 ('bl', c_float),
                 ('br', c_float),
+
                 ('rtl', c_ushort),
                 ('rtr', c_ushort),
                 ('rbl', c_ushort),
                 ('rbr', c_ushort),
-                ('ctl', c_ushort*3),
-                ('ctr', c_ushort*3),
-                ('cbl', c_ushort*3),
-                ('cbr', c_ushort*3),
-                ('update_calib', c_uint8)
+
+                ('ctl', c_ushort * 3),
+                ('ctr', c_ushort * 3),
+                ('cbl', c_ushort * 3),
+                ('cbr', c_ushort * 3),
+                
+                ('update_calib', c_ubyte),
+                ('use_alternate_report', c_ubyte),
                 ]
+                
+class motion_plus(Structure):
+    _fields_ = [('ext', c_ubyte),
+                ('raw_gyro', ang3s),
+                ('cal_gyro', ang3s),
+                ('angle_rate_gyro', ang3f),
+                ('orient', orient),                
+                ('acc_mode', c_byte),
+                ('raw_gyro_threshold', c_int),
+                ('nunchuk', c_void_p),
+                ('classic', c_void_p),                
+    ]
+    
 class expansion_union(Union):
     _fields_ = [('nunchuk', nunchuk),
                 ('classic', classic_ctrl),
                 ('gh3', guitar_hero_3),
-                ('wb', wii_board),
+                ('board', wii_board),
                 ]
 
 class expansion(Structure):
     _fields_ = [('type', c_int),
-                ('motion_plus', motion_plus),
+                ('mp', motion_plus),
                 ('u', expansion_union),
                 ]
 
@@ -172,23 +179,16 @@ class wiimote_state(Structure):
                 ('exp_rjs_ang', c_float),
                 ('exp_ljs_mag', c_float),
                 ('exp_rjs_mag', c_float),
-                ('exp_btns', c_uint16),
+                ('exp_btns', c_ushort),
                 ('exp_orient', orient),
                 ('exp_accel', vec3b),
                 ('exp_r_shoulder', c_float),
                 ('exp_l_shoulder', c_float),
-				('drx', c_short),
-				('dry', c_short),
-				('drz', c_short),
-				('exp_wb_rtr', c_uint16),
-				('exp_wb_rtl', c_uint16),
-				('exp_wb_rbr', c_uint16),
-				('exp_wb_rbl', c_uint16),
                 ('ir_ax', c_int),
                 ('ir_ay', c_int),
                 ('ir_distance', c_float),
                 ('orient', orient),
-                ('btns', c_uint16),
+                ('btns', c_ushort),
                 ('accel', vec3b),
                 ]
 
@@ -196,19 +196,14 @@ if os.name == 'nt':
     JunkSkip = [('dev_handle', c_void_p),
                 ('hid_overlap', c_void_p*5), # skipping over this data structure
                 ('stack', c_int),
-                ('timeout',c_int),#added
-				('normal_timeout',c_byte),#added
-				('exp_timeout',c_byte)#added
                 ]
-elif sys.platform == 'darwin':
-    JunkSkip = [('objc_wm', c_void_p)]
 else:
     JunkSkip = [('bdaddr', c_void_p),
                 ('bdaddr_str', c_char*18),
                 ('out_sock', c_int),
                 ('in_sock', c_int),
                 ]
-
+    
 class wiimote(Structure):
     _fields_ = [('unid', c_int),
                 ] + JunkSkip + [
@@ -233,14 +228,14 @@ class wiimote(Structure):
                 ('accel_threshold', c_int),
                 ('lstate', wiimote_state),
                 ('event', c_int),
-                ('motion_plus_id', c_byte*6)
+                ('event_buf', c_byte*32),
                 ]
 
 wiimote_p = POINTER(wiimote)
 wiimote_pp = POINTER(wiimote_p)
 
 event_cb_t = CFUNCTYPE(None, wiimote_p)
-read_cb_t = CFUNCTYPE(None, wiimote_p, POINTER(c_byte), c_ushort)
+read_cb_t = CFUNCTYPE(None, wiimote_p, POINTER(c_byte), c_uint16)
 ctrl_status_cb_t = CFUNCTYPE(None, wiimote_p, c_int, c_int, c_int, POINTER(c_int), c_float)
 dis_cb_t = CFUNCTYPE(None, wiimote_p)
 
@@ -308,7 +303,11 @@ LED = [LED_1, LED_2, LED_3, LED_4]
 EXP_NONE = 0
 EXP_NUNCHUK = 1
 EXP_CLASSIC = 2
+EXP_GUITAR_HERO_3 = 3
+EXP_WII_BOARD = 4
+EXP_MOTION_PLUS = 5
 
+                
 SMOOTHING = 0x01
 CONTINUOUS = 0x02
 ORIENT_THRESH = 0x04
@@ -360,8 +359,6 @@ def init(nwiimotes):
     # find the dll
     if os.name == 'nt':
         dll = ctypes.cdll.wiiuse
-    elif sys.platform == 'darwin':
-        dll = ctypes.cdll.LoadLibrary('libwiiuse.dylib')
     else:
         dll = ctypes.cdll.LoadLibrary('libwiiuse.so')
 
