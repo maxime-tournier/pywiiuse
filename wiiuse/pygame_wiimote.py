@@ -17,7 +17,7 @@ Gary Bishop January 2008
 
 import pygame
 from threading import Thread
-from Queue import Queue, Empty
+from queue import Queue, Empty
 import time
 
 # events to use. Is there a way to get ones known to be unused?
@@ -91,14 +91,14 @@ class wiimote_thread(Thread):
         '''Called when the library has some data for the user.'''
         
         if wm.btns:
-            for name,b in wiiuse.button.items():
+            for name,b in list(wiiuse.button.items()):
                 if wiiuse.is_just_pressed(wm, b):
                     pygame.event.post(pygame.event.Event(WIIMOTE_BUTTON_PRESS, button=name,
                                                          time=time.time(),
                                                          id=wm.unid))
 
         if wm.btns_released:
-            for name,b in wiiuse.button.items():
+            for name,b in list(wiiuse.button.items()):
                 if wiiuse.is_released(wm, b):
                     pygame.event.post(pygame.event.Event(WIIMOTE_BUTTON_RELEASE, button=name,
                                                          time=time.time(),
@@ -122,7 +122,7 @@ class wiimote_thread(Thread):
         if wm.exp.type == wiiuse.EXP_NUNCHUK:
             nc = wm.exp.u.nunchuk
             
-            for name,b in wiiuse.nunchuk_button.items():
+            for name,b in list(wiiuse.nunchuk_button.items()):
                 if wiiuse.is_just_pressed(nc, b):
                     pygame.event.post(pygame.event.Event(NUNCHUK_BUTTON_PRESS, button=name,
                                                          time=time.time(),
@@ -214,7 +214,7 @@ class wiimote(object):
                 enable |= wiiuse.ORIENT_THRESH
             else:
                 disable |= wiiuse.ORIENT_THRESH
-        print enable, disable
+        print(enable, disable)
         WT.do(wiiuse.set_flags, self.wm, enable, disable)
 
     def set_orient_thresh(self, thresh):
